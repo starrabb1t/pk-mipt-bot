@@ -2,10 +2,10 @@ FROM python:3.7.2-slim-stretch
 
 WORKDIR /opt/app
 
-COPY __init__.py /opt/app/ai_storage/
-COPY json_utils.py /opt/app/ai_storage/
-COPY storage.py /opt/app/ai_storage/
-COPY utils.py /opt/app/ai_storage/
+COPY ai_storage/__init__.py /opt/app/ai_storage/
+COPY ai_storage/json_utils.py /opt/app/ai_storage/
+COPY ai_storage/storage.py /opt/app/ai_storage/
+COPY ai_storage/utils.py /opt/app/ai_storage/
 
 COPY main.py /opt/app/
 
