@@ -13,8 +13,7 @@ class Storage:
     KEY_INFO = 'info'
 
     def __init__(self, json_path: str, model_path: str):
-        self.data_json = json_load(json_path)
-        self.data = self.data_json[self.KEY_DATA]
+        self.data = json_load(json_path)[self.KEY_DATA]
         assert isinstance(self.data, dict)
         self.questions = list(self.data.keys())
         assert all((isinstance(x, str) for x in self.questions))
@@ -22,9 +21,10 @@ class Storage:
         self.model = gensim.models.KeyedVectors.load_word2vec_format(model_path, binary=True, encoding='utf-8')
         self.mystem = Mystem()
 
+        self.__load_questions_vectors()
+
     def search(self, question: str):
-        words = self.preprocess(question)
-        vectors = np.array([self.model.get_vector(x) for x in words])
+        vectors = self.get_vectors(question)
 
         answer = None
         return answer
@@ -34,20 +34,26 @@ class Storage:
         analyzis = self.mystem.analyze(question)
         words = []
         for x in analyzis:
-            if self.is_word(x['text']):
-                w = x['analysis'][0]['lex']
-                p = x['analysis'][0]['gr']
+            try:
+                w = x[self.mystem_key_analysis][0][self.mystem_key_analysis_key_lex]
+                p = x[self.mystem_key_analysis][0][self.mystem_key_analysis_key_gr]
                 p = p.split(',')[0]
                 p = p.split('=')[0]
-                p = self.posmap[p]
-                w += '_'
-                w += p
-                words.append(w)
+                if p in self.posmap.keys():
+                    p = self.posmap[p]
+                    w += '_'
+                    w += p
+                    words.append(w)
+            except Exception:
+                pass
 
         return words
 
-    def is_word(self, string):
-        return string != ' ' and string != '\n'
+    # def __mystem_is_word(self, mystem_item: dict):
+    #     is_word = self.mystem_key_analysis in mystem_item.keys()
+    #     if is_word:
+    #         is_word = {self.mystem_key_analysis_key_lex, self.mystem_key_analysis_key_gr} - set(mystem_item[self.mystem_key_analysis][0].keys()) == set()
+    #     return is_word
 
     posmap = {
         'S': 'NOUN',
@@ -55,6 +61,31 @@ class Storage:
         'A': 'ADJ',
         'ADV': 'ADV'
     }
+
+    mystem_key_text = 'text'
+    mystem_key_analysis = 'analysis'
+    mystem_key_analysis_key_lex = 'lex'
+    mystem_key_analysis_key_gr = 'gr'
+
+    def get_vectors(self, sentence: str):
+        words = self.preprocess(sentence)
+        vectors = []
+        for x in words:
+            try:
+                vector = self.model.get_vector(x)
+                vectors.append(vector)
+            except KeyError:
+                pass
+        vectors = np.array(vectors)
+        return vectors
+
+    def __load_questions_vectors(self):
+        calculate_vectors = True
+        if calculate_vectors:
+            self.questions_vectors = []
+            for question in self.questions:
+                vectors = self.get_vectors(question)
+                self.questions_vectors.append(vectors)
 
 
 def ut_0():
