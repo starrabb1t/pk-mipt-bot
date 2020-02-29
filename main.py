@@ -2,11 +2,14 @@
 
 import os
 import sys
+import json
+import random
 from ai_storage.storage import Storage
 from telegram import ParseMode, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Updater, run_async, CommandHandler, ConversationHandler, MessageHandler, Filters
 
 s = Storage('data/data.json', 'data/tayga_upos_skipgram_300_2_2019/model.bin')
+stories = json.loads(open("data/stories.json", 'r').read())["data"]
 
 @run_async
 def start(update, context):
@@ -47,9 +50,10 @@ def events(update, context):
                              parse_mode=ParseMode.MARKDOWN)
 
 @run_async
-def random(update, context):
+def story(update, context):
+    story_list = list(stories.values())
     context.bot.send_message(chat_id=update.message.chat_id,
-                             text="<jokes>",
+                             text=story_list[random.randint(0,len(story_list)-1)],
                              parse_mode=ParseMode.MARKDOWN)
 
 @run_async
@@ -74,6 +78,7 @@ if __name__ == '__main__':
     updater.dispatcher.add_handler(CommandHandler('info', info))
     updater.dispatcher.add_handler(CommandHandler('contacts', contacts))
     updater.dispatcher.add_handler(CommandHandler('events', events))
+    updater.dispatcher.add_handler(CommandHandler('story', story))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, custom_text_question))
 
     updater.start_polling()
