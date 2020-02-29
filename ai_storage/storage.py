@@ -18,7 +18,7 @@ class Storage:
 
     top_answers = 4
 
-    def __init__(self, data_json_path: str, model_bin_path: str):
+    def __init__(self, data_json_path: str, model_bin_path: str, setup_data_vectors=False):
         json_dirname = os.path.dirname(data_json_path)
         self.__questions_vectors_filepath = os.path.join(json_dirname, self.__questions_vectors_filename)
 
@@ -29,6 +29,10 @@ class Storage:
 
         self.__model = gensim.models.KeyedVectors.load_word2vec_format(model_bin_path, binary=True, encoding='utf-8')
         self.__mystem = Mystem()
+
+        if setup_data_vectors:
+            self.setup_data_vectors()
+            return
 
         self.__load_questions_vectors()
 
@@ -114,12 +118,11 @@ class Storage:
         return vectors
 
     def __load_questions_vectors(self):
-        calculate_vectors = True
-        if os.path.isfile(self.__questions_vectors_filepath):
-            self.questions_vectors = pickle.load(open(self.__questions_vectors_filepath, "rb"))
-            # TODO assert
-            calculate_vectors = False
-            print('Data vectors loaded')
+        assert os.path.isfile(self.__questions_vectors_filepath)
+        self.questions_vectors = pickle.load(open(self.__questions_vectors_filepath, "rb"))
+        # TODO assert
+        calculate_vectors = False
+        print('Data vectors loaded')
 
         if calculate_vectors:
             print('Calculating data vectors...')
@@ -132,6 +135,17 @@ class Storage:
 
         for k, v in self.questions_vectors.items():
             self.questions_vectors[k] = np.sum(v, axis=0)
+
+    def setup_data_vectors(self):
+        assert not os.path.isfile(self.__questions_vectors_filepath)
+
+        print('Calculating data vectors...')
+        questions_vectors = {}
+        for question in self.questions:
+            vectors = self.get_vectors(question)
+            questions_vectors[question] = vectors
+        pickle.dump(questions_vectors, open(self.__questions_vectors_filepath, "wb"))
+        print('Data vectors calculated and saved')
 
     @staticmethod
     def cosine_dist(a, b):
@@ -194,3 +208,7 @@ def ut_1():
     """
     s = Storage('../data/data.json', '../data/tayga_upos_skipgram_300_2_2019/model.bin')
     s.benchmark_eval('../data/benchmark.json')
+
+
+def setup_data_vectors():
+    s = Storage('../data/data.json', '../data/tayga_upos_skipgram_300_2_2019/model.bin', setup_data_vectors=True)
