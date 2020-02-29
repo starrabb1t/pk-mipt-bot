@@ -11,9 +11,9 @@ class storage():
 
         try:
             with open(self.json_path, 'r') as j:
-                self.notes = json.load(j)
-        except:
-            print("Can't find json file here: {}".format(json_path))
+                self.data = json.load(j)
+        except Exception as ex:
+            print()
 
     def search(self, question_str):
         answer_str = None
