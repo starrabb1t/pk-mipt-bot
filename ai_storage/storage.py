@@ -16,6 +16,8 @@ class Storage:
     __KEY_DATA = 'data'
     __KEY_INFO = 'info'
 
+    top_answers = 4
+
     def __init__(self, data_json_path: str, model_bin_path: str):
         json_dirname = os.path.dirname(data_json_path)
         self.__questions_vectors_filepath = os.path.join(json_dirname, self.__questions_vectors_filename)
@@ -30,20 +32,39 @@ class Storage:
 
         self.__load_questions_vectors()
 
-    def search(self, question: str):
+    def search(self, question: str, debug=True):
+        keys, dists = self.__search_get_dists(question)
+        answers = []
+        for k in keys:
+            answers.append(self.data[k]['answer'])
+        if debug:
+            print(answers)
+        return answers
+
+    def search_debug(self, question: str):
+        keys, dists = self.__search_get_dists(question)
+        return keys, dists
+
+    def __search_get_dists(self, question: str):
         vectors = self.get_vectors(question)
 
         vector = np.sum(vectors, axis=0)
 
-        dists = {}
+        keys = []
+        dists = []
         for k, v in self.questions_vectors.items():
             dist = self.cosine_dist(vector, v)
-            dists[k] = dist
+            keys.append(k)
+            dists.append(dist)
+        keys = np.array(keys)
+        dists = np.array(dists)
 
-        answer = None
-        answer = min(dists, key=dists.get)
+        top_ids = np.argsort(dists)[:self.top_answers]
 
-        return self.data[answer]['answer']
+        keys = keys[top_ids]
+        dists = dists[top_ids]
+
+        return keys, dists
 
     def preprocess(self, question):
         # TODO fix fused words
@@ -113,6 +134,24 @@ class Storage:
         dist = 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
         return dist
 
+    def benchmark_eval(self, benchmark_json_filepath):
+        stat = []
+        benchmark_json = json_load(benchmark_json_filepath)
+        gt_keys = set(benchmark_json.keys())
+        for gt_key in gt_keys:
+            # gt_vector = self.questions_vectors[gt_key]
+            for q in benchmark_json[gt_key]:
+                pred_key = self.search_debug(q)
+                if pred_key == gt_key:
+                    stat.append(1)
+                else:
+                    stat.append(0)
+        stat = np.array(stat)
+        ones = np.where(stat==1)[0]
+        ones = ones.shape[0]
+        acc = ones/len(stat)
+        print('benchmark acc: ', acc)
+
 
 def ut_0():
     """
@@ -121,6 +160,8 @@ def ut_0():
     s = Storage('../data/data.json', '../data/tayga_upos_skipgram_300_2_2019/model.bin')
     # s.search('Красивая мама красиво мыла раму')
     # s.search('Красивая мамакрасиво мылараму')
+    # print(s.search('подготовиться к работе'))
+    print(s.search('военная'))
     print(s.search('Какие документы необходимо иметь при себе?'))
     print()
     print(s.search('собес'))
@@ -129,3 +170,11 @@ def ut_0():
     print()
     print(s.search('военная кафедра'))
     print()
+
+
+def ut_1():
+    """
+    benchmark
+    """
+    s = Storage('../data/data.json', '../data/tayga_upos_skipgram_300_2_2019/model.bin')
+    s.benchmark_eval('../data/benchmark.json')
