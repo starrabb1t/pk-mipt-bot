@@ -56,7 +56,7 @@ def random(update, context):
 def custom_text_question(update, context):
     question = update.message.text
     answer = s.search(question)
-    context.bot.send_message(chat_id=update.message.chat_id, 
+    context.bot.send_message(chat_id=update.message.chat_id,
                              text=answer,
                              parse_mode=ParseMode.MARKDOWN)
 
