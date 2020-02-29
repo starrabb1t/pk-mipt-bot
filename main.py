@@ -10,18 +10,19 @@ from telegram.ext import Updater, run_async, CommandHandler, ConversationHandler
 
 @run_async
 def start(update, context):
-    print('hey1')
-    context.bot.send_message(chat_id=update.message.chat_id, text="Kaboom!")
-
-@run_async
-def pulse(update, context):
-    print('hey2')
-    context.bot.send_message(chat_id=update.message.chat_id, text="Kaboom!")
+    help(update,context)
 
 @run_async
 def info(update, context):
-    print('hey3')
-    context.bot.send_message(chat_id=update.message.chat_id, text="Kaboom!")
+    context.bot.send_message(chat_id=update.message.chat_id, text="Info menu!")
+
+@run_async
+def help(update, context):
+    context.bot.send_message(chat_id=update.message.chat_id,
+                             text="Здравствуйте!\n" + \
+                             "Меня зовут Петр, я бот приемной комиссии НИУ МФТИ. Здесь можно найти ответы на интересующие " + \
+                             "Вас вопросы о поступлении, введя команду /info.\n" + \
+                             "Также же можете просто меня спросить напрямую, я попытаюсь ответить :) ")
 
 @run_async
 def custom_question(update, context):
@@ -37,7 +38,7 @@ if __name__ == '__main__':
     updater = Updater(telegram_api_token, use_context=True)
 
     updater.dispatcher.add_handler(CommandHandler('start', start))
-    updater.dispatcher.add_handler(CommandHandler('pulse', pulse))
+    updater.dispatcher.add_handler(CommandHandler('help', help))
     updater.dispatcher.add_handler(CommandHandler('info', info))
 
     updater.start_polling()
