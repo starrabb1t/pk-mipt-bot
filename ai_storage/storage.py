@@ -90,7 +90,8 @@ class Storage:
         'S': 'NOUN',
         'V': 'VERB',
         'A': 'ADJ',
-        'ADV': 'ADV'
+        'ADV': 'ADV',
+        # '': 'PROPN'
     }
 
     __mystem_key_text = 'text'
@@ -118,13 +119,16 @@ class Storage:
             self.questions_vectors = pickle.load(open(self.__questions_vectors_filepath, "rb"))
             # TODO assert
             calculate_vectors = False
+            print('Data vectors loaded')
 
         if calculate_vectors:
+            print('Calculating data vectors...')
             self.questions_vectors = {}
             for question in self.questions:
                 vectors = self.get_vectors(question)
                 self.questions_vectors[question] = vectors
             pickle.dump(self.questions_vectors, open(self.__questions_vectors_filepath, "wb"))
+            print('Data vectors calculated and saved')
 
         for k, v in self.questions_vectors.items():
             self.questions_vectors[k] = np.sum(v, axis=0)
@@ -135,22 +139,33 @@ class Storage:
         return dist
 
     def benchmark_eval(self, benchmark_json_filepath):
-        stat = []
+        stat_1 = []
+        stat_4 = []
         benchmark_json = json_load(benchmark_json_filepath)
         gt_keys = set(benchmark_json.keys())
         for gt_key in gt_keys:
             # gt_vector = self.questions_vectors[gt_key]
             for q in benchmark_json[gt_key]:
-                pred_key = self.search_debug(q)
-                if pred_key == gt_key:
-                    stat.append(1)
+                pred_keys, scores = self.search_debug(q)
+                if gt_key in pred_keys:
+                    stat_4.append(1)
+                    if gt_key == pred_keys[0]:
+                        stat_1.append(1)
+                    else:
+                        stat_1.append(0)
                 else:
-                    stat.append(0)
-        stat = np.array(stat)
-        ones = np.where(stat==1)[0]
+                    stat_4.append(0)
+        stat_1 = np.array(stat_1)
+        ones = np.where(stat_1==1)[0]
         ones = ones.shape[0]
-        acc = ones/len(stat)
-        print('benchmark acc: ', acc)
+        acc_1 = ones/len(stat_1)
+        print('benchmark acc_1: ', acc_1)
+
+        stat_4 = np.array(stat_4)
+        ones = np.where(stat_4 == 1)[0]
+        ones = ones.shape[0]
+        acc_4 = ones / len(stat_4)
+        print('benchmark acc_4: ', acc_4)
 
 
 def ut_0():
@@ -162,6 +177,7 @@ def ut_0():
     # s.search('Красивая мамакрасиво мылараму')
     # print(s.search('подготовиться к работе'))
     print(s.search('военная'))
+    print()
     print(s.search('Какие документы необходимо иметь при себе?'))
     print()
     print(s.search('собес'))
