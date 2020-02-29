@@ -2,11 +2,11 @@
 
 import os
 import sys
-from ai_storage.storage import storage
+from ai_storage.storage import Storage
 from telegram import ParseMode, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Updater, run_async, CommandHandler, ConversationHandler, MessageHandler, Filters
 
-#s = storage("data/data.json")
+s = Storage('data/data.json', 'data/tayga_upos_skipgram_300_2_2019/model.bin')
 
 @run_async
 def start(update, context):
@@ -54,7 +54,9 @@ def random(update, context):
 
 @run_async
 def custom_text_question(update, context):
-    context.bot.send_message(chat_id=update.message.chat_id, text="Хуй соси")
+    question = update.message.text
+    answer = s.search(question)
+    context.bot.send_message(chat_id=update.message.chat_id, text=answer)
 
 if __name__ == '__main__':
 
