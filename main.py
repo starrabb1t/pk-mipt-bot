@@ -11,8 +11,8 @@ from telegram.ext import Updater, run_async, CommandHandler, ConversationHandler
 #TODO:
 # отфильтровать вопросы
 # сделать inline-инфо для основных вопросоы
-# документы (возврат файликов)
 # рефактор менюшек и команд
+# bug со словом военная
 
 s = Storage('data/data.json', 'data/tayga_upos_skipgram_300_2_2019/model.bin')
 
@@ -65,12 +65,6 @@ def story(update, context):
                              parse_mode=ParseMode.MARKDOWN)
 
 @run_async
-def documents(update, context):
-    context.bot.send_message(chat_id=update.message.chat_id,
-                             text="<docs>",
-                             parse_mode=ParseMode.MARKDOWN)
-
-@run_async
 def custom_text_question(update, context):
     question = update.message.text
     answer = s.search(question)
@@ -92,8 +86,7 @@ if __name__ == '__main__':
     updater.dispatcher.add_handler(CommandHandler('info', info))
     updater.dispatcher.add_handler(CommandHandler('contacts', contacts))
     updater.dispatcher.add_handler(CommandHandler('events', events))
-    updater.dispatcher.add_handler(CommandHandler('documents', documents))
-    updater.dispatcher.add_handler(CommandHandler('story', story))
+    updater.dispatcher.add_handler(CommandHandler('random', story))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, custom_text_question))
 
     updater.start_polling()
