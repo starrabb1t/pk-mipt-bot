@@ -43,7 +43,7 @@ class Storage:
         answer = None
         answer = min(dists, key=dists.get)
 
-        return answer
+        return self.data[answer]
 
     def preprocess(self, question):
         # TODO fix fused words
@@ -121,5 +121,5 @@ def ut_0():
     s = Storage('../data/data.json', '../data/tayga_upos_skipgram_300_2_2019/model.bin')
     # s.search('Красивая мама красиво мыла раму')
     # s.search('Красивая мамакрасиво мылараму')
-    s.search('Какие документы необходимо иметь при себе?')
+    print(s.search('Какие документы необходимо иметь при себе?'))
     print()
