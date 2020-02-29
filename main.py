@@ -20,7 +20,17 @@ def start(update, context):
 
 @run_async
 def info(update, context):
-    context.bot.send_message(chat_id=update.message.chat_id, text="<info menu>")
+    context.bot.send_message(chat_id=update.message.chat_id, text="<info>")
+
+@run_async
+def contacts(update, context):
+    context.bot.send_message(chat_id=update.message.chat_id,
+                             text="*График работы* приёмной комиссии летом 2020 года по приёму документов от поступающих на 1 курс " + \
+                                  "бакалавриата и специалитета будет опубликован не позднее 01 июня 2020 года.\n\n" + \
+                                  "*Время работы (вне приемной кампании)*: с понедельника по пятницу, с 9:00 до 18:00, обед с 12:00 до 13:00\n" + \
+                                  "*Телефон*: +7 (495) 408-48-00\n" + \
+                                  "*E-mail*: [pk@mipt.ru](pk@mipt.ru)",
+                             parse_mode=ParseMode.MARKDOWN)
 
 @run_async
 def help(update, context):
@@ -31,9 +41,15 @@ def help(update, context):
                              parse_mode=ParseMode.MARKDOWN)
 
 @run_async
-def calendar(update, context):
+def events(update, context):
     context.bot.send_message(chat_id=update.message.chat_id,
-                             text="*bold* _italic_ `fixed width font` [линк-хуинк](http://google.com).",
+                             text="<events>",
+                             parse_mode=ParseMode.MARKDOWN)
+
+@run_async
+def random(update, context):
+    context.bot.send_message(chat_id=update.message.chat_id,
+                             text="<jokes>",
                              parse_mode=ParseMode.MARKDOWN)
 
 @run_async
@@ -52,7 +68,8 @@ if __name__ == '__main__':
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(CommandHandler('help', help))
     updater.dispatcher.add_handler(CommandHandler('info', info))
-    updater.dispatcher.add_handler(CommandHandler('calendar', calendar))
+    updater.dispatcher.add_handler(CommandHandler('contacts', contacts))
+    updater.dispatcher.add_handler(CommandHandler('events', events))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, custom_text_question))
 
     updater.start_polling()
