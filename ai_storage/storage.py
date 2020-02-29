@@ -16,16 +16,16 @@ class Storage:
     KEY_DATA = 'data'
     KEY_INFO = 'info'
 
-    def __init__(self, json_path: str, model_path: str):
-        json_dirname = os.path.dirname(json_path)
+    def __init__(self, data_json_path: str, model_bin_path: str):
+        json_dirname = os.path.dirname(data_json_path)
         self.questions_vectors_filepath = os.path.join(json_dirname, self.questions_vectors_filename)
 
-        self.data = json_load(json_path)[self.KEY_DATA]
+        self.data = json_load(data_json_path)[self.KEY_DATA]
         assert isinstance(self.data, dict)
         self.questions = list(self.data.keys())
         assert all((isinstance(x, str) for x in self.questions))
 
-        self.model = gensim.models.KeyedVectors.load_word2vec_format(model_path, binary=True, encoding='utf-8')
+        self.model = gensim.models.KeyedVectors.load_word2vec_format(model_bin_path, binary=True, encoding='utf-8')
         self.mystem = Mystem()
 
         self.__load_questions_vectors()
@@ -115,6 +115,7 @@ class Storage:
         dist = 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
         return dist
 
+
 def ut_0():
     """
     unit test 0
@@ -124,6 +125,3 @@ def ut_0():
     # s.search('Красивая мамакрасиво мылараму')
     s.search('Какие документы необходимо иметь при себе?')
     print()
-
-
-ut_0()
