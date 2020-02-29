@@ -61,7 +61,7 @@ def ut_0():
     """
     unit test 0
     """
-    s = Storage('../data/data2.json', '../data/tayga_upos_skipgram_300_2_2019/model.bin')
+    s = Storage('../data/data.json', '../data/tayga_upos_skipgram_300_2_2019/model.bin')
     s.search('Красивая мама красиво мыла раму')
     # s.search('Красивая мамакрасиво мылараму')
     print()
