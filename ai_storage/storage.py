@@ -32,6 +32,7 @@ class Storage:
 
         if setup_data_vectors:
             self.setup_data_vectors()
+            print('WARNING: dont use this instance of Storage class, recreate new!')
             return
 
         self.__load_questions_vectors()
@@ -169,6 +170,7 @@ class Storage:
                         stat_1.append(0)
                 else:
                     stat_4.append(0)
+                    stat_1.append(0)
         stat_1 = np.array(stat_1)
         ones = np.where(stat_1==1)[0]
         ones = ones.shape[0]
