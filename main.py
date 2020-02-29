@@ -67,7 +67,7 @@ def story(update, context):
 @run_async
 def custom_text_question(update, context):
     question = update.message.text
-    answer = s.search(question)
+    answer = s.search(question)[0]
     context.bot.send_message(chat_id=update.message.chat_id,
                              text=answer,
                              parse_mode=ParseMode.MARKDOWN)
