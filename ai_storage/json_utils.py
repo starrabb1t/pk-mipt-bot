@@ -1,5 +1,5 @@
 import json
-import os
+from ai_storage.utils import assert_filepath
 
 
 def json_dump(json_filepath, json_obj, indent=4):
@@ -9,12 +9,7 @@ def json_dump(json_filepath, json_obj, indent=4):
 
 
 def json_load(json_filepath):
-    assert_file(json_filepath)
+    assert_filepath(json_filepath)
     with open(json_filepath) as f:
         json_obj = json.load(f)
     return json_obj
-
-
-def assert_file(filepath):
-    errmsg = str(filepath) + ' should exists as file'
-    assert os.path.isfile(filepath), errmsg
