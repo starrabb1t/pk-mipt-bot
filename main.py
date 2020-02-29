@@ -8,8 +8,16 @@ from ai_storage.storage import Storage
 from telegram import ParseMode, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Updater, run_async, CommandHandler, ConversationHandler, MessageHandler, Filters
 
+#TODO:
+# отфильтровать вопросы
+# сделать inline-инфо для основных вопросоы
+# документы (возврат файликов)
+# рефактор менюшек и команд
+
 s = Storage('data/data.json', 'data/tayga_upos_skipgram_300_2_2019/model.bin')
-stories = json.loads(open("data/stories.json", 'r').read())["data"]
+
+_stories = json.loads(open("data/stories.json", 'r').read())["data"]
+_events = "".join(json.loads(open("data/events.json", 'r').read())["data"])
 
 @run_async
 def start(update, context):
@@ -46,14 +54,20 @@ def help(update, context):
 @run_async
 def events(update, context):
     context.bot.send_message(chat_id=update.message.chat_id,
-                             text="<events>",
+                             text=_events,
                              parse_mode=ParseMode.MARKDOWN)
 
 @run_async
 def story(update, context):
-    story_list = list(stories.values())
+    story_list = list(_stories.values())
     context.bot.send_message(chat_id=update.message.chat_id,
                              text=story_list[random.randint(0,len(story_list)-1)],
+                             parse_mode=ParseMode.MARKDOWN)
+
+@run_async
+def documents(update, context):
+    context.bot.send_message(chat_id=update.message.chat_id,
+                             text="<docs>",
                              parse_mode=ParseMode.MARKDOWN)
 
 @run_async
@@ -78,6 +92,7 @@ if __name__ == '__main__':
     updater.dispatcher.add_handler(CommandHandler('info', info))
     updater.dispatcher.add_handler(CommandHandler('contacts', contacts))
     updater.dispatcher.add_handler(CommandHandler('events', events))
+    updater.dispatcher.add_handler(CommandHandler('documents', documents))
     updater.dispatcher.add_handler(CommandHandler('story', story))
     updater.dispatcher.add_handler(MessageHandler(Filters.text, custom_text_question))
 
