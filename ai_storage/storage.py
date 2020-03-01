@@ -16,7 +16,7 @@ class Storage:
     __KEY_DATA = 'data'
     __KEY_INFO = 'info'
 
-    top_answers = 4
+    top_answers = 3
 
     def __init__(self, data_json_path: str, model_bin_path: str, setup_data_vectors=False):
         json_dirname = os.path.dirname(data_json_path)
@@ -39,6 +39,7 @@ class Storage:
 
     def search(self, question: str, debug=True):
         # try:
+        #     out = self.search__private()
             out = self.__search_get_dists(question)
             if out is not None:
                 keys, dists = out
@@ -59,11 +60,16 @@ class Storage:
         # except Exception:
         #     return None
 
-    def search_debug(self, question: str):
+    def search__private(self, question: str, thr: float):
+        assert 0 <= thr <= 2
         out = self.__search_get_dists(question)
         if out is not None:
             keys, dists = out
-            return keys, dists
+
+            if dists[0] < thr:
+                return keys, dists, 1
+            else:
+                return keys, dists, self.top_answers
         return None
 
     def __search_get_dists(self, question: str):
@@ -180,9 +186,69 @@ class Storage:
         denom = np.linalg.norm(a) * np.linalg.norm(b)
         assert denom != 0
         dist = 1 - np.dot(a, b) / denom
+        if dist < 0:
+            dist = 0
         return dist
 
-    def benchmark_eval(self, benchmark_json_filepath, thr):
+    def benchmark_eval(self, benchmark_json_filepath, thr: float, beta: float):
+        benchmark_key_garbage = 'Мусор'
+        TP = 0
+        FP = 0
+        FN = 0
+        TN = 0
+        stat_3 = []
+        benchmark_json = json_load(benchmark_json_filepath)
+        gt_keys = set(benchmark_json.keys())
+        for gt_key in gt_keys:
+            for q in benchmark_json[gt_key]:
+                out = self.search__private(q, thr)
+                if out is not None:
+                    pred_keys, scores, N = out
+                    if N == 1:
+                        if gt_key == pred_keys[0]:
+                            TP += 1
+                        else:
+                            FP += 1
+                    elif N > 1:
+                        assert N == 3
+                        if gt_key == benchmark_key_garbage:
+                            TN += 1
+                        else:
+                            FN += 1
+                    else:
+                        raise Exception
+                    assert len(pred_keys) == self.top_answers
+                    if gt_key in pred_keys:
+                        stat_3.append(1)
+                    else:
+                        stat_3.append(0)
+                else:
+                    if gt_key == benchmark_key_garbage:
+                        TN += 1
+                        stat_3.append(1)
+                    else:
+                        FN += 1
+                        stat_3.append(0)
+        full_recall = (TP+FN)/(TP+FN+TN+FP)
+        precision = TP/(TP+FP)
+        recall = TP/(TP+FN)
+        F = (1+beta**2)*precision*recall/(beta**2*precision+recall)
+        top1_acc = (TP+TN)/(TP+FN+TN+FP)
+
+        stat_3 = np.array(stat_3)
+        ones = np.where(stat_3 == 1)[0]
+        ones = ones.shape[0]
+        top3_acc = ones / len(stat_3)
+
+        print('thr', thr)
+        print('full_recall', round(full_recall, 2))
+        print('precision', round(precision, 2))
+        print('recall', round(recall,2))
+        print('F', round(F,2))
+        print('top1_acc', round(top1_acc,2))
+        print('top3_acc', round(top3_acc,2))
+
+    def benchmark_eval_old(self, benchmark_json_filepath, thr):
         benchmark_key_garbage = 'Мусор'
         stat_1 = []
         stat_4 = []
@@ -191,7 +257,7 @@ class Storage:
         for gt_key in gt_keys:
             # gt_vector = self.questions_vectors[gt_key]
             for q in benchmark_json[gt_key]:
-                out = self.search_debug(q)
+                out = self.search__private(q, thr)
                 if out is not None:
                     pred_keys, scores = out
                     if gt_key in pred_keys:
@@ -255,10 +321,14 @@ def ut_0():
     # s.search('Красивая мама красиво мыла раму')
     # s.search('Красивая мамакрасиво мылараму')
     # print(s.search('подготовиться к работе'))
+    print(s.search('Предоставляют ли на время приема документов общежитие?'))
     print(s.search('Что такое задавальник?'))
+    print()
     print(s.search('военная'))
     print()
     print(s.search('Какие документы необходимо иметь при себе?'))
+    print()
+    print(s.search('Как проходят занятия по физической культуре?'))
     print()
     print(s.search('собес'))
     print()
@@ -273,7 +343,7 @@ def ut_1():
     benchmark
     """
     s = Storage('../data/data.json', '../data/tayga_upos_skipgram_300_2_2019/model.bin')
-    s.benchmark_eval('../data/benchmark.json')
+    s.benchmark_eval('../data/benchmark.json', 0.1, 1.0)
 
 
 def setup_data_vectors():
