@@ -8,10 +8,6 @@ from ai_storage.storage import Storage
 from telegram import ParseMode, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import Updater, run_async, CommandHandler, ConversationHandler, MessageHandler, Filters
 
-#TODO:
-# отфильтровать вопросы
-# сделать inline-инфо для основных вопросов
-
 s = Storage('data/data.json', 'data/tayga_upos_skipgram_300_2_2019/model.bin')
 
 _stories = json.loads(open("data/stories.json", 'r').read())["data"]
@@ -29,7 +25,19 @@ def start(update, context):
 
 @run_async
 def info(update, context):
-    keyboard = [[KeyboardButton(x, callback_data=x) for x in list(_info.keys())]]
+
+    info_keys = list(_info.keys())
+
+    keyboard = [[KeyboardButton(info_keys[0], callback_data=info_keys[0])],
+                [KeyboardButton(info_keys[1], callback_data=info_keys[1])],
+                [KeyboardButton(info_keys[2], callback_data=info_keys[2])],
+                [KeyboardButton(info_keys[3], callback_data=info_keys[3])],
+                [KeyboardButton(info_keys[4], callback_data=info_keys[4])],
+                [KeyboardButton(info_keys[5], callback_data=info_keys[5])],
+                [KeyboardButton(info_keys[6], callback_data=info_keys[6])],
+                [KeyboardButton(info_keys[7], callback_data=info_keys[7])],
+                [KeyboardButton("Отмена", callback_data="Отмена")]]
+
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
 
     update.message.reply_text(
@@ -41,7 +49,7 @@ def info(update, context):
 
 @run_async
 def show_info(update, context):
-    if update.message.text == 'cancel':
+    if update.message.text == 'Отмена':
         return ConversationHandler.END
 
     answer = _info[update.message.text]
@@ -108,7 +116,7 @@ if __name__ == '__main__':
     updater.dispatcher.add_handler(CommandHandler('contacts', contacts))
     updater.dispatcher.add_handler(CommandHandler('events', events))
     updater.dispatcher.add_handler(CommandHandler('random', story))
-    updater.dispatcher.add_handler(MessageHandler(Filters.text, custom_text_question))
+    updater.dispatcher.add_handler(MessageHandler(Filters.text and Filters.regex('^(?!.*Отмена)'), custom_text_question))
 
     updater.start_polling()
     updater.idle()
