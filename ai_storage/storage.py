@@ -53,14 +53,23 @@ class Storage:
     def __search_get_dists(self, question: str):
         vectors = self.get_vectors(question)
 
-        vector = np.sum(vectors, axis=0)
-
         keys = []
         dists = []
         for k, v in self.questions_vectors.items():
-            dist = self.cosine_dist(vector, v)
-            keys.append(k)
-            dists.append(dist)
+            if v is None:  # TODO the same check for vector variable
+                # garbage
+                pass
+            elif isinstance(v, np.ndarray):
+                assert v.shape == (300,)
+                vector = np.sum(vectors, axis=0)
+                dist = self.cosine_dist(vector, v)
+                keys.append(k)
+                dists.append(dist)
+            elif isinstance(v, list):
+                # exact math search here
+                pass
+            else:
+                raise Exception
         keys = np.array(keys)
         dists = np.array(dists)
 
@@ -108,6 +117,8 @@ class Storage:
 
     def get_vectors(self, sentence: str):
         words = self.preprocess(sentence)
+        if len(words) == 0:
+            return None  # None is garbage
         vectors = []
         for x in words:
             try:
@@ -116,6 +127,10 @@ class Storage:
             except KeyError:
                 pass
         vectors = np.array(vectors)
+        if len(vectors) == 0:
+            # TODO exact match search should be completed from here
+            # (vectors are empty and words are not here)
+            return words
         return vectors
 
     def __load_questions_vectors(self):
@@ -135,7 +150,8 @@ class Storage:
             print('Data vectors calculated and saved')
 
         for k, v in self.questions_vectors.items():
-            self.questions_vectors[k] = np.sum(v, axis=0)
+            self.questions_vectors[k] = self.__define_sentence_type(v)
+                #np.sum(v, axis=0)
 
     def setup_data_vectors(self):
         assert not os.path.isfile(self.__questions_vectors_filepath)
@@ -150,7 +166,9 @@ class Storage:
 
     @staticmethod
     def cosine_dist(a, b):
-        dist = 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+        denom = np.linalg.norm(a) * np.linalg.norm(b)
+        assert denom != 0
+        dist = 1 - np.dot(a, b) / denom
         return dist
 
     def benchmark_eval(self, benchmark_json_filepath):
@@ -183,6 +201,26 @@ class Storage:
         acc_4 = ones / len(stat_4)
         print('benchmark acc_4: ', acc_4)
 
+    def __define_sentence_type(self, sentence_vector):
+        """
+        sentence_vector could be:
+        np.ndarray.shape == (300,)
+        None - garbage
+        list of words - for exact match search
+        """
+        if sentence_vector is None:  # TODO the same check for vector variable
+            # garbage
+            pass
+        elif isinstance(sentence_vector, np.ndarray):
+            assert sentence_vector.shape[-1] == 300
+            sentence_vector = np.sum(sentence_vector, axis=0)
+        elif isinstance(sentence_vector, list):
+            # exact math search here
+            assert all([isinstance(x, str) for x in sentence_vector])
+        else:
+            raise Exception
+        return sentence_vector
+
 
 def ut_0():
     """
@@ -192,6 +230,7 @@ def ut_0():
     # s.search('Красивая мама красиво мыла раму')
     # s.search('Красивая мамакрасиво мылараму')
     # print(s.search('подготовиться к работе'))
+    print(s.search('Что такое задавальник?'))
     print(s.search('военная'))
     print()
     print(s.search('Какие документы необходимо иметь при себе?'))
@@ -214,3 +253,4 @@ def ut_1():
 
 def setup_data_vectors():
     s = Storage('../data/data.json', '../data/tayga_upos_skipgram_300_2_2019/model.bin', setup_data_vectors=True)
+ut_1()
