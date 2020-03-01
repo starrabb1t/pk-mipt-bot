@@ -14,8 +14,6 @@ _stories = json.loads(open("data/stories.json", 'r').read())["data"]
 _events = "".join(json.loads(open("data/events.json", 'r').read())["data"])
 _info = json.loads(open("data/info.json", 'r').read())
 
-#VER 3
-
 @run_async
 def start(update, context):
     context.bot.send_message(chat_id=update.message.chat_id,
