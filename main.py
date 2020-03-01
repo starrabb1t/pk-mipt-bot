@@ -12,22 +12,11 @@ from telegram.ext import Updater, run_async, CommandHandler, ConversationHandler
 # отфильтровать вопросы
 # сделать inline-инфо для основных вопросов
 
-buttons = [
-    "Направления подготовки и количество мест",
-    "Правила приема",
-    "Учет индивидуальных достижений",
-    "Олимпиады",
-    "Вступительные испытания",
-    "Целевое обучение",
-    "Приказы и списки",
-    "Стоимость обучения",
-    "Учеба и быт"
-]
-
 s = Storage('data/data.json', 'data/tayga_upos_skipgram_300_2_2019/model.bin')
 
 _stories = json.loads(open("data/stories.json", 'r').read())["data"]
 _events = "".join(json.loads(open("data/events.json", 'r').read())["data"])
+_info = json.loads(open("data/info.json", 'r').read())
 
 @run_async
 def start(update, context):
@@ -40,7 +29,15 @@ def start(update, context):
 
 @run_async
 def info(update, context):
-    context.bot.send_message(chat_id=update.message.chat_id, text="<info>")
+    keyboard = [
+        [KeyboardButton(x, callback_data=x.lower()) for x in list(_info.keys())]
+    ]
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
+
+    update.message.reply_text(
+        "Выберите, что Вас интересует:",
+        reply_markup=reply_markup
+    )
 
 @run_async
 def contacts(update, context):
@@ -90,11 +87,27 @@ if __name__ == '__main__':
     if telegram_api_token is None:
         sys.exit(0x01)
 
+    conversation_handler = ConversationHandler(
+        entry_points=[CommandHandler('info', info)],
+
+        states={
+            _ADD_NAME: [MessageHandler(Filters.text, add_text)],
+            _ADD_TEXT: [MessageHandler(Filters.text, add_date)],
+            _ADD_DATE: [MessageHandler(Filters.text, add_media)],
+            _ADD_MEDIA: [MessageHandler(Filters.text, add_success)]
+        },
+
+        fallbacks=[MessageHandler(Filters.regex('^cancel'), add_cancel)]
+    )
+
+
+
     updater = Updater(telegram_api_token, use_context=True)
+
+    updater.dispatcher.add_handler(conversation_handler)
 
     updater.dispatcher.add_handler(CommandHandler('start', start))
     updater.dispatcher.add_handler(CommandHandler('help', help))
-    updater.dispatcher.add_handler(CommandHandler('info', info))
     updater.dispatcher.add_handler(CommandHandler('contacts', contacts))
     updater.dispatcher.add_handler(CommandHandler('events', events))
     updater.dispatcher.add_handler(CommandHandler('random', story))
