@@ -38,38 +38,47 @@ class Storage:
         self.__load_questions_vectors()
 
     def search(self, question: str, debug=True):
-        keys, dists = self.__search_get_dists(question)
-        answers = []
-        for k in keys:
-            answers.append(self.data[k]['answer'])
-        if debug:
-            print(answers)
-        return answers
+        # try:
+            out = self.__search_get_dists(question)
+            if out is not None:
+                keys, dists = out
+                answers = []
+                for k in keys:
+                    answers.append(self.data[k]['answer'])
+                if debug:
+                    print(answers)
+
+                assert isinstance(answers, list)
+                assert len(answers) <= self.top_answers
+                assert all([isinstance(x, str) for x in answers])
+                return answers
+            else:
+                return None
+        # except Exception:
+        #     return None
 
     def search_debug(self, question: str):
-        keys, dists = self.__search_get_dists(question)
-        return keys, dists
+        out = self.__search_get_dists(question)
+        if out is not None:
+            keys, dists = out
+            return keys, dists
+        return None
 
     def __search_get_dists(self, question: str):
         vectors = self.get_vectors(question)
 
+        vector = self.__define_sentence_type(vectors)  # TODO now None or shape(300,)
+        if vector is None:
+            return vector
         keys = []
         dists = []
         for k, v in self.questions_vectors.items():
-            if v is None:  # TODO the same check for vector variable
-                # garbage
-                pass
-            elif isinstance(v, np.ndarray):
-                assert v.shape == (300,)
-                vector = np.sum(vectors, axis=0)
+            v = self.__define_sentence_type(v)
+            if v is not None:
                 dist = self.cosine_dist(vector, v)
                 keys.append(k)
+                assert 0 <= dist <= 2
                 dists.append(dist)
-            elif isinstance(v, list):
-                # exact math search here
-                pass
-            else:
-                raise Exception
         keys = np.array(keys)
         dists = np.array(dists)
 
@@ -171,7 +180,8 @@ class Storage:
         dist = 1 - np.dot(a, b) / denom
         return dist
 
-    def benchmark_eval(self, benchmark_json_filepath):
+    def benchmark_eval(self, benchmark_json_filepath, thr):
+        benchmark_key_garbage = 'Мусор'
         stat_1 = []
         stat_4 = []
         benchmark_json = json_load(benchmark_json_filepath)
@@ -179,16 +189,25 @@ class Storage:
         for gt_key in gt_keys:
             # gt_vector = self.questions_vectors[gt_key]
             for q in benchmark_json[gt_key]:
-                pred_keys, scores = self.search_debug(q)
-                if gt_key in pred_keys:
-                    stat_4.append(1)
-                    if gt_key == pred_keys[0]:
-                        stat_1.append(1)
+                out = self.search_debug(q)
+                if out is not None:
+                    pred_keys, scores = out
+                    if gt_key in pred_keys:
+                        stat_4.append(1)
+                        if gt_key == pred_keys[0]:
+                            stat_1.append(1)
+                        else:
+                            stat_1.append(0)
                     else:
+                        stat_4.append(0)
                         stat_1.append(0)
                 else:
-                    stat_4.append(0)
-                    stat_1.append(0)
+                    if gt_key == benchmark_key_garbage:
+                        stat_1.append(1)
+                        stat_4.append(1)
+                    else:
+                        stat_1.append(0)
+                        stat_4.append(0)
         stat_1 = np.array(stat_1)
         ones = np.where(stat_1==1)[0]
         ones = ones.shape[0]
@@ -201,25 +220,29 @@ class Storage:
         acc_4 = ones / len(stat_4)
         print('benchmark acc_4: ', acc_4)
 
-    def __define_sentence_type(self, sentence_vector):
+    def __define_sentence_type(self, sentence_vectors):
         """
         sentence_vector could be:
         np.ndarray.shape == (300,)
         None - garbage
         list of words - for exact match search
         """
-        if sentence_vector is None:  # TODO the same check for vector variable
+        if sentence_vectors is None:  # TODO the same check for vector variable
             # garbage
             pass
-        elif isinstance(sentence_vector, np.ndarray):
-            assert sentence_vector.shape[-1] == 300
-            sentence_vector = np.sum(sentence_vector, axis=0)
-        elif isinstance(sentence_vector, list):
+        elif isinstance(sentence_vectors, np.ndarray):
+            assert sentence_vectors.shape[-1] == 300
+            if len(sentence_vectors.shape) == 2:
+                sentence_vectors = np.sum(sentence_vectors, axis=0)
+            else:
+                assert len(sentence_vectors.shape) == 1
+        elif isinstance(sentence_vectors, list):
             # exact math search here
-            assert all([isinstance(x, str) for x in sentence_vector])
+            assert all([isinstance(x, str) for x in sentence_vectors])
+            sentence_vectors = None  # TODO
         else:
             raise Exception
-        return sentence_vector
+        return sentence_vectors
 
 
 def ut_0():
@@ -253,4 +276,3 @@ def ut_1():
 
 def setup_data_vectors():
     s = Storage('../data/data.json', '../data/tayga_upos_skipgram_300_2_2019/model.bin', setup_data_vectors=True)
-ut_1()
