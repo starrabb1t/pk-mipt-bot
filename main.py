@@ -29,15 +29,28 @@ def start(update, context):
 
 @run_async
 def info(update, context):
-    keyboard = [
-        [KeyboardButton(x, callback_data=x.lower()) for x in list(_info.keys())]
-    ]
+    keyboard = [[KeyboardButton(x, callback_data=x) for x in list(_info.keys())]]
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
 
     update.message.reply_text(
         "Выберите, что Вас интересует:",
         reply_markup=reply_markup
     )
+
+    return 1
+
+@run_async
+def show_info(update, context):
+    if update.message.text == 'cancel':
+        return ConversationHandler.END
+
+    answer = _info[update.message.text]
+
+    context.bot.send_message(chat_id=update.message.chat_id,
+                             text=answer,
+                             parse_mode=ParseMode.MARKDOWN)
+
+    return ConversationHandler.END
 
 @run_async
 def contacts(update, context):
@@ -87,26 +100,10 @@ if __name__ == '__main__':
     if telegram_api_token is None:
         sys.exit(0x01)
 
-    conversation_handler = ConversationHandler(
-        entry_points=[CommandHandler('info', info)],
-
-        states={
-            _ADD_NAME: [MessageHandler(Filters.text, add_text)],
-            _ADD_TEXT: [MessageHandler(Filters.text, add_date)],
-            _ADD_DATE: [MessageHandler(Filters.text, add_media)],
-            _ADD_MEDIA: [MessageHandler(Filters.text, add_success)]
-        },
-
-        fallbacks=[MessageHandler(Filters.regex('^cancel'), add_cancel)]
-    )
-
-
-
     updater = Updater(telegram_api_token, use_context=True)
 
-    updater.dispatcher.add_handler(conversation_handler)
-
     updater.dispatcher.add_handler(CommandHandler('start', start))
+    updater.dispatcher.add_handler(CommandHandler('info', info))
     updater.dispatcher.add_handler(CommandHandler('help', help))
     updater.dispatcher.add_handler(CommandHandler('contacts', contacts))
     updater.dispatcher.add_handler(CommandHandler('events', events))
