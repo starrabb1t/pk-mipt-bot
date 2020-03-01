@@ -46,13 +46,15 @@ class Storage:
                 for k in keys:
                     answers.append(self.data[k]['answer'])
                 if debug:
-                    print(answers)
+                    print('search answer:', answers)
 
                 assert isinstance(answers, list)
                 assert len(answers) <= self.top_answers
                 assert all([isinstance(x, str) for x in answers])
                 return answers
             else:
+                if debug:
+                    print('search answer:', None)
                 return None
         # except Exception:
         #     return None
