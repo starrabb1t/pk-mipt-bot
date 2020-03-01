@@ -38,29 +38,47 @@ class Storage:
         self.__load_questions_vectors()
 
     def search(self, question: str, debug=True):
-        keys, dists = self.__search_get_dists(question)
-        answers = []
-        for k in keys:
-            answers.append(self.data[k]['answer'])
-        if debug:
-            print(answers)
-        return answers
+        # try:
+            out = self.__search_get_dists(question)
+            if out is not None:
+                keys, dists = out
+                answers = []
+                for k in keys:
+                    answers.append(self.data[k]['answer'])
+                if debug:
+                    print(answers)
+
+                assert isinstance(answers, list)
+                assert len(answers) <= self.top_answers
+                assert all([isinstance(x, str) for x in answers])
+                return answers
+            else:
+                return None
+        # except Exception:
+        #     return None
 
     def search_debug(self, question: str):
-        keys, dists = self.__search_get_dists(question)
-        return keys, dists
+        out = self.__search_get_dists(question)
+        if out is not None:
+            keys, dists = out
+            return keys, dists
+        return None
 
     def __search_get_dists(self, question: str):
         vectors = self.get_vectors(question)
 
-        vector = np.sum(vectors, axis=0)
-
+        vector = self.__define_sentence_type(vectors)  # TODO now None or shape(300,)
+        if vector is None:
+            return vector
         keys = []
         dists = []
         for k, v in self.questions_vectors.items():
-            dist = self.cosine_dist(vector, v)
-            keys.append(k)
-            dists.append(dist)
+            v = self.__define_sentence_type(v)
+            if v is not None:
+                dist = self.cosine_dist(vector, v)
+                keys.append(k)
+                assert 0 <= dist <= 2
+                dists.append(dist)
         keys = np.array(keys)
         dists = np.array(dists)
 
@@ -108,6 +126,8 @@ class Storage:
 
     def get_vectors(self, sentence: str):
         words = self.preprocess(sentence)
+        if len(words) == 0:
+            return None  # None is garbage
         vectors = []
         for x in words:
             try:
@@ -116,6 +136,10 @@ class Storage:
             except KeyError:
                 pass
         vectors = np.array(vectors)
+        if len(vectors) == 0:
+            # TODO exact match search should be completed from here
+            # (vectors are empty and words are not here)
+            return words
         return vectors
 
     def __load_questions_vectors(self):
@@ -135,7 +159,8 @@ class Storage:
             print('Data vectors calculated and saved')
 
         for k, v in self.questions_vectors.items():
-            self.questions_vectors[k] = np.sum(v, axis=0)
+            self.questions_vectors[k] = self.__define_sentence_type(v)
+                #np.sum(v, axis=0)
 
     def setup_data_vectors(self):
         assert not os.path.isfile(self.__questions_vectors_filepath)
@@ -150,10 +175,13 @@ class Storage:
 
     @staticmethod
     def cosine_dist(a, b):
-        dist = 1 - np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+        denom = np.linalg.norm(a) * np.linalg.norm(b)
+        assert denom != 0
+        dist = 1 - np.dot(a, b) / denom
         return dist
 
-    def benchmark_eval(self, benchmark_json_filepath):
+    def benchmark_eval(self, benchmark_json_filepath, thr):
+        benchmark_key_garbage = 'Мусор'
         stat_1 = []
         stat_4 = []
         benchmark_json = json_load(benchmark_json_filepath)
@@ -161,16 +189,25 @@ class Storage:
         for gt_key in gt_keys:
             # gt_vector = self.questions_vectors[gt_key]
             for q in benchmark_json[gt_key]:
-                pred_keys, scores = self.search_debug(q)
-                if gt_key in pred_keys:
-                    stat_4.append(1)
-                    if gt_key == pred_keys[0]:
-                        stat_1.append(1)
+                out = self.search_debug(q)
+                if out is not None:
+                    pred_keys, scores = out
+                    if gt_key in pred_keys:
+                        stat_4.append(1)
+                        if gt_key == pred_keys[0]:
+                            stat_1.append(1)
+                        else:
+                            stat_1.append(0)
                     else:
+                        stat_4.append(0)
                         stat_1.append(0)
                 else:
-                    stat_4.append(0)
-                    stat_1.append(0)
+                    if gt_key == benchmark_key_garbage:
+                        stat_1.append(1)
+                        stat_4.append(1)
+                    else:
+                        stat_1.append(0)
+                        stat_4.append(0)
         stat_1 = np.array(stat_1)
         ones = np.where(stat_1==1)[0]
         ones = ones.shape[0]
@@ -183,6 +220,30 @@ class Storage:
         acc_4 = ones / len(stat_4)
         print('benchmark acc_4: ', acc_4)
 
+    def __define_sentence_type(self, sentence_vectors):
+        """
+        sentence_vector could be:
+        np.ndarray.shape == (300,)
+        None - garbage
+        list of words - for exact match search
+        """
+        if sentence_vectors is None:  # TODO the same check for vector variable
+            # garbage
+            pass
+        elif isinstance(sentence_vectors, np.ndarray):
+            assert sentence_vectors.shape[-1] == 300
+            if len(sentence_vectors.shape) == 2:
+                sentence_vectors = np.sum(sentence_vectors, axis=0)
+            else:
+                assert len(sentence_vectors.shape) == 1
+        elif isinstance(sentence_vectors, list):
+            # exact math search here
+            assert all([isinstance(x, str) for x in sentence_vectors])
+            sentence_vectors = None  # TODO
+        else:
+            raise Exception
+        return sentence_vectors
+
 
 def ut_0():
     """
@@ -192,6 +253,7 @@ def ut_0():
     # s.search('Красивая мама красиво мыла раму')
     # s.search('Красивая мамакрасиво мылараму')
     # print(s.search('подготовиться к работе'))
+    print(s.search('Что такое задавальник?'))
     print(s.search('военная'))
     print()
     print(s.search('Какие документы необходимо иметь при себе?'))
