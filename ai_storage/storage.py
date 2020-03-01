@@ -199,6 +199,7 @@ class Storage:
         stat_3 = []
         benchmark_json = json_load(benchmark_json_filepath)
         gt_keys = set(benchmark_json.keys())
+        assert gt_keys - set(self.questions) == set((benchmark_key_garbage,))
         for gt_key in gt_keys:
             for q in benchmark_json[gt_key]:
                 out = self.search__private(q, thr)
@@ -229,7 +230,7 @@ class Storage:
                     else:
                         FN += 1
                         stat_3.append(0)
-        full_recall = (TP+FN)/(TP+FN+TN+FP)
+        full_recall = (TP+FP)/(TP+FN+TN+FP)
         precision = TP/(TP+FP)
         recall = TP/(TP+FN)
         F = (1+beta**2)*precision*recall/(beta**2*precision+recall)
@@ -243,50 +244,10 @@ class Storage:
         print('thr', thr)
         print('full_recall', round(full_recall, 2))
         print('precision', round(precision, 2))
-        print('recall', round(recall,2))
-        print('F', round(F,2))
-        print('top1_acc', round(top1_acc,2))
-        print('top3_acc', round(top3_acc,2))
-
-    def benchmark_eval_old(self, benchmark_json_filepath, thr):
-        benchmark_key_garbage = 'Мусор'
-        stat_1 = []
-        stat_4 = []
-        benchmark_json = json_load(benchmark_json_filepath)
-        gt_keys = set(benchmark_json.keys())
-        for gt_key in gt_keys:
-            # gt_vector = self.questions_vectors[gt_key]
-            for q in benchmark_json[gt_key]:
-                out = self.search__private(q, thr)
-                if out is not None:
-                    pred_keys, scores = out
-                    if gt_key in pred_keys:
-                        stat_4.append(1)
-                        if gt_key == pred_keys[0]:
-                            stat_1.append(1)
-                        else:
-                            stat_1.append(0)
-                    else:
-                        stat_4.append(0)
-                        stat_1.append(0)
-                else:
-                    if gt_key == benchmark_key_garbage:
-                        stat_1.append(1)
-                        stat_4.append(1)
-                    else:
-                        stat_1.append(0)
-                        stat_4.append(0)
-        stat_1 = np.array(stat_1)
-        ones = np.where(stat_1==1)[0]
-        ones = ones.shape[0]
-        acc_1 = ones/len(stat_1)
-        print('benchmark acc_1: ', acc_1)
-
-        stat_4 = np.array(stat_4)
-        ones = np.where(stat_4 == 1)[0]
-        ones = ones.shape[0]
-        acc_4 = ones / len(stat_4)
-        print('benchmark acc_4: ', acc_4)
+        print('recall', round(recall, 2))
+        print('F', round(F, 2))
+        print('top1_acc', round(top1_acc, 2))
+        print('top3_acc', round(top3_acc, 2))
 
     def __define_sentence_type(self, sentence_vectors):
         """
@@ -321,6 +282,8 @@ def ut_0():
     # s.search('Красивая мама красиво мыла раму')
     # s.search('Красивая мамакрасиво мылараму')
     # print(s.search('подготовиться к работе'))
+    print(s.search('Где подготовиться к парам'))
+    print(s.search('хуй'))
     print(s.search('Предоставляют ли на время приема документов общежитие?'))
     print(s.search('Что такое задавальник?'))
     print()
@@ -343,8 +306,9 @@ def ut_1():
     benchmark
     """
     s = Storage('../data/data.json', '../data/tayga_upos_skipgram_300_2_2019/model.bin')
-    s.benchmark_eval('../data/benchmark.json', 0.1, 1.0)
+    s.benchmark_eval('../data/benchmark.json', 0.4, 1.0)
 
 
 def setup_data_vectors():
     s = Storage('../data/data.json', '../data/tayga_upos_skipgram_300_2_2019/model.bin', setup_data_vectors=True)
+# ut_1()
